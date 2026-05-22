@@ -12,6 +12,7 @@ public class SentryHelper {
     private static var isInitialized = false
     private static var didLogInitStatus = false
     private static let configuredDSN = Bundle.main.infoDictionary!["SENTRY_DSN"] as! String
+    private static let configuredEnvironment = Bundle.main.infoDictionary!["SENTRY_ENVIRONMENT"] as! String
     private static let sdkName = "FronteggSwift"
     // Thread-safe initialization queue (serial to ensure atomic initialization)
     private static let initQueue = DispatchQueue(label: "com.frontegg.sentry.init")
@@ -298,6 +299,7 @@ public class SentryHelper {
             // Initialize Sentry SDK (synchronous call)
             SentrySDK.start { options in
                 options.dsn = configuredDSN
+                options.environment = configuredEnvironment
                 options.debug = false
                 // Attach a stacktrace to captured messages / errors where possible,
                 // so we can see where in the SDK the event originated.
@@ -326,10 +328,6 @@ public class SentryHelper {
 
                 options.beforeBreadcrumb = { crumb in
                     Self.applyBreadcrumbSanitization(crumb)
-                }
-                
-                if let bundleId = Bundle.main.bundleIdentifier {
-                    options.environment = bundleId
                 }
                 
                 var releaseName = "frontegg-ios-sdk"
