@@ -11,7 +11,7 @@ public class SentryHelper {
     private static let logger = getLogger("SentryHelper")
     private static var isInitialized = false
     private static var didLogInitStatus = false
-    private static let configuredDSN = "https://7f13156fe85003ccf1b968a476787bb1@o362363.ingest.us.sentry.io/4510708685471744"
+    private static let configuredDSN = Bundle.main.infoDictionary!["SENTRY_DSN"] as! String
     private static let sdkName = "FronteggSwift"
     // Thread-safe initialization queue (serial to ensure atomic initialization)
     private static let initQueue = DispatchQueue(label: "com.frontegg.sentry.init")
