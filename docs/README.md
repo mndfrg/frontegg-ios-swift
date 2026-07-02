@@ -67,3 +67,34 @@ Sign up here → [https://portal.us.frontegg.com/signup](https://portal.us.front
 
 Need help? Our team is here for you:  
 [https://support.frontegg.com/frontegg/directories](https://support.frontegg.com/frontegg/directories)
+
+
+
+# Customizations
+
+## Sentry DSN & Environment Configuration
+
+Add to application Info.plist
+
+```
+<key>SENTRY_DSN</key>
+<string></string>
+<key>SENTRY_ENVIRONMENT</key>
+<string></string>
+
+```
+
+
+## Keychain & UserDefaults App Group Configuration
+
+Add to Frontegg.plist
+
+```
+<key>appGroupIdentifier</key>
+<string>group.com.example.myapp</string>
+```
+
+Both your main app and share extension must:
+• Have the same App Group in their entitlements
+• Have the same Keychain Access Group in their entitlements (matching the app group identifier)
+• Include the same Frontegg​.plist with the app​Group​Identifier key
