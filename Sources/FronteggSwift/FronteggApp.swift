@@ -171,7 +171,7 @@ public class FronteggApp {
         }
 
         self.embeddedMode = config.embeddedMode
-        self.credentialManager = CredentialManager(serviceKey: config.keychainService)
+        self.credentialManager = CredentialManager(serviceKey: config.keychainService, accessGroup: config.appGroupIdentifier)
         self.bundleIdentifier = bundleIdentifier
         self.handleLoginWithSocialLogin = config.loginWithSocialLogin
         self.handleLoginWithSSO = config.loginWithSSO
@@ -396,7 +396,7 @@ public class FronteggApp {
             return false
         }
         
-        let userDefaults = UserDefaults.standard
+        let userDefaults = CredentialManager.sharedDefaults
         if !userDefaults.bool(forKey: "IsFronteggFirstApplicationRun") {
             userDefaults.set(true, forKey: "IsFronteggFirstApplicationRun")
             return true

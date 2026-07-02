@@ -52,7 +52,7 @@ extension FronteggAuth {
         credentialManager.clear()
         CredentialManager.clearPendingOAuthFlows()
         SocialLoginUrlGenerator.shared.clearPendingSocialCodeVerifiers()
-        UserDefaults.standard.removeObject(forKey: KeychainKeys.region.rawValue)
+        CredentialManager.sharedDefaults.removeObject(forKey: KeychainKeys.region.rawValue)
 
         setIsAuthenticated(false)
         setUser(nil)
