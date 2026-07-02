@@ -40,6 +40,7 @@ struct FronteggPlist: Decodable, Equatable {
     let dismissAuthSessionOnOffline: Bool
     let offlineDebounceDelay: TimeInterval
     let useAssetLinks: Bool
+    var appGroupIdentifier: String? = nil
 
     enum CodingKeys: CodingKey {
         case keychainService
@@ -69,6 +70,7 @@ struct FronteggPlist: Decodable, Equatable {
         case dismissAuthSessionOnOffline
         case offlineDebounceDelay
         case useAssetLinks
+        case appGroupIdentifier
     }
 
     init(
@@ -100,6 +102,7 @@ struct FronteggPlist: Decodable, Equatable {
         dismissAuthSessionOnOffline: Bool = false,
         offlineDebounceDelay: TimeInterval = 2.0,
         useAssetLinks: Bool = false
+        appGroupIdentifier: String? = nil
     ) {
         self.keychainService = keychainService
         self.embeddedMode = embeddedMode
@@ -129,6 +132,7 @@ struct FronteggPlist: Decodable, Equatable {
         self.dismissAuthSessionOnOffline = dismissAuthSessionOnOffline
         self.offlineDebounceDelay = offlineDebounceDelay
         self.useAssetLinks = useAssetLinks
+        self.appGroupIdentifier = appGroupIdentifier
     }
 
     init(from decoder: any Decoder) throws {
@@ -214,6 +218,9 @@ struct FronteggPlist: Decodable, Equatable {
 
         let useAssetLinks = try container.decodeIfPresent(Bool.self, forKey: .useAssetLinks)
         self.useAssetLinks = useAssetLinks ?? false
+
+        let appGroupIdentifier = try container.decodeIfPresent(String.self, forKey: .appGroupIdentifier)
+        self.appGroupIdentifier = appGroupIdentifier.flatMap { $0.isEmpty ? nil : $0 }
 
         do {
             self.payload = try Payload(from: decoder)

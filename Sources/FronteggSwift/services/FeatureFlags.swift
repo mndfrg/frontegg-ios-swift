@@ -14,7 +14,7 @@ public class FeatureFlags {
         public let clientId: String
         public let api: Api
         public let storage: UserDefaults
-        public init(clientId: String, api: Api, storage: UserDefaults = .standard) {
+        public init(clientId: String, api: Api, storage: UserDefaults = CredentialManager.sharedDefaults) {
             self.clientId = clientId;
             self.storage = storage;
             self.api = api

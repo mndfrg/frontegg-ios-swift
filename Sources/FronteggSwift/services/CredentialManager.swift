@@ -28,22 +28,37 @@ public class CredentialManager {
     
     private let logger = getLogger("CredentialManager")
     private let serviceKey: String?
+    private let accessGroup: String?
+
+    /// Shared UserDefaults instance used for all SDK storage.
+    /// When an `appGroupIdentifier` is configured in Frontegg.plist, this will
+    /// be set to `UserDefaults(suiteName:)` so that app extensions can access
+    /// the same data. Defaults to `.standard`.
+    public static var sharedDefaults: UserDefaults = .standard
     
-    init(serviceKey: String?) {
-        self.serviceKey = serviceKey;
+    init(serviceKey: String?, accessGroup: String? = nil) {
+        self.serviceKey = serviceKey
+        self.accessGroup = accessGroup
+        if let appGroup = accessGroup {
+            CredentialManager.sharedDefaults = UserDefaults(suiteName: appGroup) ?? .standard
+        }
     }
     
     func save(key: String, value: String) throws {
         logger.trace("Saving \(key) in keyhcain")
         
         if let valueData = value.data(using: .utf8) {
-            let query = [
+            var queryDict: [CFString: Any] = [
                 kSecClass: kSecClassGenericPassword,
                 kSecAttrService: serviceKey ?? "frontegg",
                 kSecAttrAccount: key,
                 kSecValueData: valueData,
                 kSecAttrAccessible: kSecAttrAccessibleAfterFirstUnlock
-            ] as [CFString : Any] as CFDictionary
+            ]
+            if let accessGroup {
+                queryDict[kSecAttrAccessGroup] = accessGroup
+            }
+            let query = queryDict as CFDictionary
             
             let status = SecItemAdd(query, nil)
             
@@ -51,11 +66,15 @@ public class CredentialManager {
                 logger.trace("Updating existing \(key)")
                 // For update, don't include kSecAttrAccessible in the search query
                 // It should only be in the attributes dictionary if we want to change it
-                let updateQuery = [
+                var updateQueryDict: [CFString: Any] = [
                     kSecClass: kSecClassGenericPassword,
                     kSecAttrService: serviceKey ?? "frontegg",
                     kSecAttrAccount: key
-                ] as [CFString : Any] as CFDictionary
+                ]
+                if let accessGroup {
+                    updateQueryDict[kSecAttrAccessGroup] = accessGroup
+                }
+                let updateQuery = updateQueryDict as CFDictionary
                 
                 let newAttributes : CFDictionary = [
                     kSecValueData: valueData,
@@ -89,13 +108,17 @@ public class CredentialManager {
     
     func get(key:String) throws -> String? {
         logger.trace("retrieving \(key) from keyhcain")
-        let query = [
+        var queryDict: [CFString: Any] = [
             kSecClass: kSecClassGenericPassword,
             kSecAttrService: serviceKey ?? "frontegg",
             kSecAttrAccount: key,
             kSecReturnData: kCFBooleanTrue!,
             kSecMatchLimit: kSecMatchLimitOne
-        ] as [CFString : Any] as CFDictionary
+        ]
+        if let accessGroup {
+            queryDict[kSecAttrAccessGroup] = accessGroup
+        }
+        let query = queryDict as CFDictionary
         
         
         var result: AnyObject?
@@ -116,11 +139,15 @@ public class CredentialManager {
     }
     
     func delete(key: String) {
-        let query = [
+        var queryDict: [CFString: Any] = [
             kSecClass: kSecClassGenericPassword,
             kSecAttrService: serviceKey ?? "frontegg",
             kSecAttrAccount: key
-        ] as [CFString : Any] as CFDictionary
+        ]
+        if let accessGroup {
+            queryDict[kSecAttrAccessGroup] = accessGroup
+        }
+        let query = queryDict as CFDictionary
 
         let status = SecItemDelete(query)
         if status != errSecSuccess && status != errSecItemNotFound {
@@ -139,10 +166,14 @@ public class CredentialManager {
         
         if excludingKeys.isEmpty {
             // Fast path: delete all items with service key
-            let query = [
+            var queryDict: [CFString: Any] = [
                 kSecClass: kSecClassGenericPassword,
                 kSecAttrService: serviceKey ?? "frontegg"
-            ] as [CFString : Any] as CFDictionary
+            ]
+            if let accessGroup {
+                queryDict[kSecAttrAccessGroup] = accessGroup
+            }
+            let query = queryDict as CFDictionary
             let status = SecItemDelete(query)
             
             if status != errSecSuccess {
@@ -154,12 +185,15 @@ public class CredentialManager {
             logger.trace("Clearing keychain while excluding keys: \(excludingKeys)")
             
             // Get all items with the service key
-            let query: [CFString: Any] = [
+            var query: [CFString: Any] = [
                 kSecClass: kSecClassGenericPassword,
                 kSecAttrService: serviceKey ?? "frontegg",
                 kSecReturnAttributes: true,
                 kSecMatchLimit: kSecMatchLimitAll
             ]
+            if let accessGroup {
+                query[kSecAttrAccessGroup] = accessGroup
+            }
             
             var result: AnyObject?
             let status = SecItemCopyMatching(query as CFDictionary, &result)
@@ -187,15 +221,15 @@ public class CredentialManager {
     }
     
     static func saveCodeVerifier(_ codeVerifier: String) {
-        UserDefaults.standard.set(codeVerifier, forKey: KeychainKeys.codeVerifier.rawValue)
+        CredentialManager.sharedDefaults.set(codeVerifier, forKey: KeychainKeys.codeVerifier.rawValue)
     }
     
     static func getCodeVerifier() -> String? {
-        return UserDefaults.standard.string(forKey: KeychainKeys.codeVerifier.rawValue)
+        return CredentialManager.sharedDefaults.string(forKey: KeychainKeys.codeVerifier.rawValue)
     }
 
     static func clearCodeVerifier() {
-        UserDefaults.standard.removeObject(forKey: KeychainKeys.codeVerifier.rawValue)
+        CredentialManager.sharedDefaults.removeObject(forKey: KeychainKeys.codeVerifier.rawValue)
     }
 
     struct CodeVerifierResolution {
@@ -217,14 +251,14 @@ public class CredentialManager {
     private static let oauthStateLock = NSLock()
 
     private static func getPendingOAuthStateVerifiers() -> [String: String] {
-        UserDefaults.standard.dictionary(forKey: KeychainKeys.oauthStateVerifiers.rawValue) as? [String: String] ?? [:]
+        CredentialManager.sharedDefaults.dictionary(forKey: KeychainKeys.oauthStateVerifiers.rawValue) as? [String: String] ?? [:]
     }
 
     private static func savePendingOAuthStateVerifiers(_ verifiers: [String: String]) {
         if verifiers.isEmpty {
-            UserDefaults.standard.removeObject(forKey: KeychainKeys.oauthStateVerifiers.rawValue)
+            CredentialManager.sharedDefaults.removeObject(forKey: KeychainKeys.oauthStateVerifiers.rawValue)
         } else {
-            UserDefaults.standard.set(verifiers, forKey: KeychainKeys.oauthStateVerifiers.rawValue)
+            CredentialManager.sharedDefaults.set(verifiers, forKey: KeychainKeys.oauthStateVerifiers.rawValue)
         }
     }
 
@@ -326,7 +360,7 @@ public class CredentialManager {
     }
 
     private static func clearPendingOAuthStatesUnsafe() {
-        UserDefaults.standard.removeObject(forKey: KeychainKeys.oauthStateVerifiers.rawValue)
+        CredentialManager.sharedDefaults.removeObject(forKey: KeychainKeys.oauthStateVerifiers.rawValue)
     }
 
     static func clearCodeVerifierIfMatching(_ codeVerifier: String?) {
@@ -350,11 +384,11 @@ public class CredentialManager {
     
     
     static func saveSelectedRegion(_ region: String) {
-        UserDefaults.standard.set(region, forKey: KeychainKeys.region.rawValue)
+        CredentialManager.sharedDefaults.set(region, forKey: KeychainKeys.region.rawValue)
     }
     
     static func getSelectedRegion() -> String? {
-        return UserDefaults.standard.string(forKey: KeychainKeys.region.rawValue)
+        return CredentialManager.sharedDefaults.string(forKey: KeychainKeys.region.rawValue)
     }
     
     
