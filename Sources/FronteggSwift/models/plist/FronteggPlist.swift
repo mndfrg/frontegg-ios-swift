@@ -101,7 +101,7 @@ struct FronteggPlist: Decodable, Equatable {
         entitlementsEnabled: Bool = false,
         dismissAuthSessionOnOffline: Bool = false,
         offlineDebounceDelay: TimeInterval = 2.0,
-        useAssetLinks: Bool = false
+        useAssetLinks: Bool = false,
         appGroupIdentifier: String? = nil
     ) {
         self.keychainService = keychainService
