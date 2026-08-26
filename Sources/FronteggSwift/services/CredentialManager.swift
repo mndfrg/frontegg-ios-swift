@@ -23,8 +23,14 @@ public class CredentialManager {
     public enum KeychainError: Error {
         case duplicateEntry;
         case valueDataIsNil;
+        case keychainUnavailable(OSStatus);
         case unknown(OSStatus);
     }
+
+    static let unavailableStatuses: Set<OSStatus> = [
+        errSecInteractionNotAllowed,
+        errSecNotAvailable
+    ]
     
     private let logger = getLogger("CredentialManager")
     private let serviceKey: String?
@@ -42,6 +48,10 @@ public class CredentialManager {
         if let appGroup = accessGroup {
             CredentialManager.sharedDefaults = UserDefaults(suiteName: appGroup) ?? .standard
         }
+    }
+
+    var copyMatching: (CFDictionary, UnsafeMutablePointer<AnyObject?>?) -> OSStatus = { query, result in
+        SecItemCopyMatching(query, result)
     }
     
     func save(key: String, value: String) throws {
@@ -122,8 +132,13 @@ public class CredentialManager {
         
         
         var result: AnyObject?
-        let status = SecItemCopyMatching(query, &result)
+        let status = copyMatching(query, &result)
         
+        if Self.unavailableStatuses.contains(status) {
+            logger.warning("Keychain is temporarily unavailable (status: \(status)) while retrieving \(key)")
+            throw KeychainError.keychainUnavailable(status)
+        }
+
         if status != errSecSuccess {
             //logger.error("Unknown error occured while trying to retrieve the key: \(key) from keyhcain")
             throw KeychainError.unknown(status)

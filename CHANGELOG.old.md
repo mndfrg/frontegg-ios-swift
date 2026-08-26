@@ -1,3 +1,25 @@
+## v1.3.20
+
+- Fixed: with `useAssetLinks` enabled, sign-in could fail to return to the app for environments whose Frontegg base URL includes a path — for example `https://api.example.com/fe-auth`, where a shared domain routes a prefix through to Frontegg. The App-Link callback was built without that path, so it matched neither the association file published for the app nor the redirect URI registered for it: iOS never handed the callback back and the browser was left on a page the shared domain does not serve, after the user had already authenticated. The callback now carries the path, and the previous form keeps working so sessions issued before upgrading are unaffected. Environments whose base URL has no path are unchanged. (FR-26673 — [#318](https://github.com/frontegg/frontegg-ios-swift/pull/318))
+
+## v1.3.18
+
+- Fixed: SSO sign-in could return the user to the login screen with `Failed to login with SSO`, even though authentication with the identity provider (Google, Microsoft) had already succeeded. After a successful assertion the SDK was left waiting for a callback that never arrived; it now completes the sign-in from the session issued by that same response. No app or configuration changes are needed. (FR-26387 — [#306](https://github.com/frontegg/frontegg-ios-swift/pull/306))
+- Fixed: tapping the unlock link in an account-lockout email opened the app and hung on a loading spinner, with no way to reach the login screen short of restarting. The SDK now recognises a completed unlock and returns the user to a fresh login page. No app or configuration changes are needed. (FR-26330 — [#307](https://github.com/frontegg/frontegg-ios-swift/pull/307))
+
+## v1.3.17
+
+- Fixed: social sign-in could fail on recent iOS versions with a "Failed to get extract code" error, even though the user had already authenticated with the provider successfully. Some values returned by the provider contain characters that must be escaped in a URL, and they were not being escaped when the SDK built the URL that completes the exchange — so iOS rejected it and sign-in stopped about a second later. Retrying did not help. No app or configuration changes are needed. (FR-26132 — [#305](https://github.com/frontegg/frontegg-ios-swift/pull/305))
+- Improved: when a social login callback cannot be processed, the SDK now logs the specific reason it was rejected instead of a single generic message, making these reports faster to diagnose. (FR-26132 — [#305](https://github.com/frontegg/frontegg-ios-swift/pull/305))
+
+## v1.3.16
+
+- Fixed: with `useAssetLinks` enabled, embedded login failed with an `ER-00001` error and a reloading login box. The App-Link callback was being treated as a magic link, which dropped the PKCE code verifier from the token exchange. Introduced in 1.3.14; the option is off by default, so only apps that had explicitly enabled it were affected. (FR-26308 — [#299](https://github.com/frontegg/frontegg-ios-swift/pull/299))
+
+## v1.3.15
+
+- Fixed: when a social login could not be handed back to the embedded login view, the SDK now reports the failure immediately instead of surfacing a misleading "failed to get extract code" error about a second later. (FR-26132 — [#300](https://github.com/frontegg/frontegg-ios-swift/pull/300))
+
 ## v1.3.14
 
 - Added: opt-in App-Link (https) OAuth redirect. Setting `useAssetLinks` in `Frontegg.plist` routes the OAuth callback through `https://{your-frontegg-domain}/oauth/account/redirect/ios/{bundleId}` instead of the custom URL scheme, matching Android's `useAssetsLinks`. Off by default, and requires iOS 17.4+ — older versions fall back to the custom-scheme callback. (FR-26224 — [#294](https://github.com/frontegg/frontegg-ios-swift/pull/294))
